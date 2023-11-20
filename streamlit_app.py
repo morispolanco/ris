@@ -1,67 +1,63 @@
-# Importar las librerías necesarias
 import streamlit as st
 import requests
-import re
 import zipfile
-import io
 
-# Crear una función para buscar una referencia bibliográfica en internet y devolver una ficha .ris con los datos recopilados
-def buscar_referencia(referencia):
-  # Usar el servicio de Bing para obtener los resultados de la búsqueda web
-  url = "https://api.bing.microsoft.com/v7.0/search"
-  headers = {"Ocp-Apim-Subscription-Key": "tu_clave_de_suscripción"}
-  params = {"q": referencia, "count": 1}
-  response = requests.get(url, headers=headers, params=params)
-  data = response.json()
+def main():
+    st.title("Generador de fichas bibliográficas")
 
-  # Extraer el título, el autor, la fecha, la fuente y el enlace del primer resultado
-  titulo = data["webPages"]["value"][0]["name"]
-  autor = data["webPages"]["value"][0]["snippet"].split("-")[0].strip()
-  fecha = data["webPages"]["value"][0]["dateLastCrawled"].split("T")[0]
-  fuente = data["webPages"]["value"][0]["displayUrl"]
-  enlace = data["webPages"]["value"][0]["url"]
+    # Entrada de referencias bibliográficas
+    references = st.text_area("Ingrese las referencias bibliográficas (una por línea)")
 
-  # Crear una ficha .ris con el formato adecuado
-  ficha = f"""TY  - GEN
-TI  - {titulo}
-AU  - {autor}
-PY  - {fecha}
-UR  - {enlace}
-PB  - {fuente}
-ER  - 
-"""
-  return ficha
+    if st.button("Generar fichas"):
+        # Separar las referencias en líneas
+        reference_list = references.strip().split('\n')
 
-# Crear la interfaz de la app de streamlit
-st.title("App de streamlit para buscar referencias bibliográficas")
-st.write("Esta app toma una lista de referencias bibliográficas y busca cada entrada en internet; luego, con los datos recopilados, hace una ficha .ris por cada entrada. Por último, comprime las fichas y genera un zip.")
+        # Lista para almacenar las fichas
+        ris_list = []
 
-# Crear un campo de texto para que el usuario introduzca la lista de referencias separadas por saltos de línea
-referencias = st.text_area("Introduce la lista de referencias bibliográficas separadas por saltos de línea", "")
+        st.write("Procesando...")
+        for reference in reference_list:
+            # Buscar la entrada en Internet utilizando la API Crossref
+            response = requests.get(f"https://api.crossref.org/works?query={reference}")
 
-# Crear un botón para iniciar el proceso de búsqueda y generación de fichas
-if st.button("Buscar y generar fichas"):
-  # Crear una lista vacía para almacenar las fichas
-  fichas = []
+            if response.status_code == 200:
+                data = response.json()
 
-  # Iterar por cada referencia de la lista
-  for referencia in referencias.split("\n"):
-    # Buscar la referencia y obtener la ficha correspondiente
-    ficha = buscar_referencia(referencia)
+                if data["message"]["items"]:
+                    item = data["message"]["items"][0]
 
-    # Añadir la ficha a la lista
-    fichas.append(ficha)
+                    # Generar la ficha en formato RIS
+                    ris = generate_ris(item)
 
-  # Crear un archivo zip en memoria con las fichas
-  zip_buffer = io.BytesIO()
-  with zipfile.ZipFile(zip_buffer, "w") as zip_file:
-    for i, ficha in enumerate(fichas):
-      # Crear un nombre de archivo para cada ficha
-      nombre = f"referencia_{i+1}.ris"
+                    # Agregar la ficha a la lista
+                    ris_list.append(ris)
+                else:
+                    st.warning(f"No se encontró información para la referencia: {reference}")
+            else:
+                st.error(f"Error en la solicitud para la referencia: {reference}")
 
-      # Escribir la ficha en el archivo zip
-      zip_file.writestr(nombre, ficha)
+        if ris_list:
+            # Comprimir las fichas en un archivo zip
+            zip_filename = "fichas_bibliograficas.zip"
+            with zipfile.ZipFile(zip_filename, "w") as zip_file:
+                for i, ris in enumerate(ris_list):
+                    zip_file.writestr(f"ficha_{i+1}.ris", ris)
 
-  # Enviar el archivo zip al usuario
-  st.write("Aquí tienes el archivo zip con las fichas:")
-  st.download_button("Descargar zip", zip_buffer.getvalue(), "referencias.zip")
+            st.success(f"Se han generado las fichas y se han comprimido en el archivo {zip_filename}")
+        else:
+            st.warning("No se generaron fichas para ninguna de las referencias ingresadas.")
+
+def generate_ris(item):
+    # Obtener los campos de la entrada
+    title = item.get("title", [""])[0]
+    authors = item.get("author", [])
+    date = item.get("published-print", item.get("published-online", ""))
+
+    # Generar la ficha en formato RIS
+    ris = f"TY  - JOUR\nTI  - {title}\n"
+    ris += "AU  - " + "\nAU  - ".join(authors) + "\n"
+    ris += f"PY  - {date.get('date-parts', [''])[0][0]}\nER  -\n\n"
+    return ris
+
+if __name__ == "__main__":
+    main()
