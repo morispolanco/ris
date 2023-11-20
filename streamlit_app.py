@@ -59,20 +59,42 @@ def main():
 
 
 def generate_ris(item):
-    # Obtener los campos de la entrada
-    title = item.get("title", [""])
-    authors = item.get("author", [])
+    ris = ""
 
-    # Obtener los nombres de los autores como cadenas de texto
-    author_names = [f"{author.get('family', '')}, {author.get('given', '')}" for author in authors]
+    # Generar la ficha en formato RIS
+    ris += f"TY  - {item.get('type', '')}\n"
+    ris += f"TI  - {item.get('title', [''])[0]}\n"
+
+    authors = item.get('author', [])
+    for author in authors:
+        given_name = author.get('given', '')
+        family_name = author.get('family', '')
+        ris += f"AU  - {family_name}, {given_name}\n"
 
     date_parts = item.get("issued", {}).get("date-parts", [[]])
     date = date_parts[0][0] if date_parts else ""
+    ris += f"PY  - {date}\n"
 
-    # Generar la ficha en formato RIS
-    ris = f"TY  - JOUR\nTI  - {title[0]}\n"
-    ris += "AU  - " + "\nAU  - ".join(author_names) + "\n"
-    ris += f"PY  - {date}\nER  -\n\n"
+    # Otros campos opcionales
+    volume = item.get('volume', '')
+    if volume:
+        ris += f"VL  - {volume}\n"
+
+    issue = item.get('issue', '')
+    if issue:
+        ris += f"IS  - {issue}\n"
+
+    page = item.get('page', '')
+    if page:
+        ris += f"SP  - {page}\n"
+
+    doi = item.get('DOI', '')
+    if doi:
+        ris += f"DO  - {doi}\n"
+
+    # Agregar los campos que desees incluir en la ficha RIS
+
+    ris += "ER  -\n\n"
     return ris
 
 
