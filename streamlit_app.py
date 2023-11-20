@@ -49,14 +49,15 @@ def main():
 
 def generate_ris(item):
     # Obtener los campos de la entrada
-    title = item.get("title", [""])[0]
+    title = item.get("title", "")
     authors = item.get("author", [])
-    date = item.get("published-print", item.get("published-online", ""))
+    date_parts = item.get("issued", {}).get("date-parts", [[]])
+    date = date_parts[0][0] if date_parts else ""
 
     # Generar la ficha en formato RIS
     ris = f"TY  - JOUR\nTI  - {title}\n"
     ris += "AU  - " + "\nAU  - ".join(authors) + "\n"
-    ris += f"PY  - {date.get('date-parts', [''])[0][0]}\nER  -\n\n"
+    ris += f"PY  - {date}\nER  -\n\n"
     return ris
 
 if __name__ == "__main__":
