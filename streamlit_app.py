@@ -42,7 +42,7 @@ def main():
             zip_filename = "fichas_bibliograficas.zip"
             with zipfile.ZipFile(zip_filename, "w") as zip_file:
                 for i, ris in enumerate(ris_list):
-                    zip_file.writestr(f"ficha_{i+1}.ris", ris)
+                    zip_file.writestr(f"ficha_{i+1}.ris", ris.encode('utf-8'))
 
             # Abrir el archivo ZIP como bytes
             with open(zip_filename, "rb") as file:
@@ -57,9 +57,10 @@ def main():
         else:
             st.warning("No se generaron fichas para ninguna de las referencias ingresadas.")
 
+
 def generate_ris(item):
     # Obtener los campos de la entrada
-    title = item.get("title", "")
+    title = item.get("title", [""])
     authors = item.get("author", [])
 
     # Obtener los nombres de los autores como cadenas de texto
@@ -73,6 +74,7 @@ def generate_ris(item):
     ris += "AU  - " + "\nAU  - ".join(author_names) + "\n"
     ris += f"PY  - {date}\nER  -\n\n"
     return ris
+
 
 if __name__ == "__main__":
     main()
