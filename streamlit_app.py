@@ -1,6 +1,7 @@
 import streamlit as st
 import requests
 import zipfile
+import base64
 
 def main():
     st.title("Generador de fichas bibliográficas")
@@ -37,13 +38,22 @@ def main():
                 st.error(f"Error en la solicitud para la referencia: {reference}")
 
         if ris_list:
-            # Comprimir las fichas en un archivo zip
+            # Comprimir las fichas en un archivo ZIP
             zip_filename = "fichas_bibliograficas.zip"
             with zipfile.ZipFile(zip_filename, "w") as zip_file:
                 for i, ris in enumerate(ris_list):
                     zip_file.writestr(f"ficha_{i+1}.ris", ris)
 
-            st.success(f"Se han generado las fichas y se han comprimido en el archivo {zip_filename}")
+            # Abrir el archivo ZIP como bytes
+            with open(zip_filename, "rb") as file:
+                zip_data = file.read()
+
+            # Descargar el archivo ZIP
+            b64_zip = base64.b64encode(zip_data).decode()
+            href = f'<a href="data:application/zip;base64,{b64_zip}" download="{zip_filename}">Descargar archivo ZIP</a>'
+            st.markdown(href, unsafe_allow_html=True)
+
+            st.success("Se han generado las fichas bibliográficas.")
         else:
             st.warning("No se generaron fichas para ninguna de las referencias ingresadas.")
 
