@@ -75,8 +75,11 @@ def generate_ris(item):
     date = date_parts[0][0] if date_parts else ""
     ris += f"PY  - {date}\n"
 
-    publication = item.get('container-title', [''])[0]
-    ris += f"PB  - {publication}\n"
+    if 'journal-issue' in item:
+        issue = item['journal-issue']
+        if 'title' in issue:
+            publication = issue['title'][0]
+            ris += f"PB  - {publication}\n"
 
     # Otros campos opcionales
     volume = item.get('volume', '')
