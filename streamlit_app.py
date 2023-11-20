@@ -69,7 +69,7 @@ def generate_ris(item):
     date = date_parts[0][0] if date_parts else ""
 
     # Generar la ficha en formato RIS
-    ris = f"TY  - JOUR\nTI  - {title}\n"
+    ris = f"TY  - JOUR\nTI  - {title[0]}\n"
     ris += "AU  - " + "\nAU  - ".join(author_names) + "\n"
     ris += f"PY  - {date}\nER  -\n\n"
     return ris
