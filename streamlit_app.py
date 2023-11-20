@@ -1,106 +1,45 @@
 import streamlit as st
-import requests
-import zipfile
-import base64
+import json
+import logging
+from zipimport import zipimporter
+from zipfile import ZIP_DEFLATED
 
-def main():
-    st.title("Generador de fichas bibliográficas")
+# Función para processar los datos bibliográficos
+def process_data(data):
+    text = data.lower()
+    return text
 
-    # Entrada de referencias bibliográficas
-    references = st.text_area("Ingrese las referencias bibliográficas (una por línea)")
+# Función para generar los archivos .ris
+def generate_ris_files(data):
+    text = data.lower()
+    with open("example.ris", "w") as file:
+        file.write(text)
+    return text
 
-    if st.button("Generar fichas"):
-        # Separar las referencias en líneas
-        reference_list = references.strip().split('\n')
+# Función para comprimir los archivos .ris en un archivo ZIP
+def compress_files(data):
+    text = data.lower()
+    with zipfile.ZipFile("example.zip", "w") as zip_file:
+        zip_file.write("example.ris", arcpath="")
+    return text
 
-        # Lista para almacenar las fichas
-        ris_list = []
+# Función para descargar los archivos .ris y el archivo ZIP
+def download_files():
+    data = process_data(st.text_input("Ingrese un texto: "))
+    generated_files = generate_ris_files(data)
+    compressed_files = compress_files(data)
+    return generated_files, compressed_files
 
-        st.write("Procesando...")
-        for reference in reference_list:
-            # Buscar la entrada en Internet utilizando la API Crossref
-            response = requests.get(f"https://api.crossref.org/works?query={reference}")
+# Crear la aplicación de Streamlit
+st.title("Aplicación de Streamlit para generar archivos .ris y comprimirlos en un archivo ZIP")
+st.write("Ingrese un texto: ", None)
+button = st.button("Descargar")
 
-            if response.status_code == 200:
-                data = response.json()
+@button.click
+def download_files():
+    data = process_data(st.text_input("Ingrese un texto: "))
+    generated_files = generate_ris_files(data)
+    compressed_files = compress_files(data)
+    return generated_files, compressed_files
 
-                if data["message"]["items"]:
-                    item = data["message"]["items"][0]
-
-                    # Generar la ficha en formato RIS
-                    ris = generate_ris(item)
-
-                    # Agregar la ficha a la lista
-                    ris_list.append(ris)
-                else:
-                    st.warning(f"No se encontró información para la referencia: {reference}")
-            else:
-                st.error(f"Error en la solicitud para la referencia: {reference}")
-
-        if ris_list:
-            # Comprimir las fichas en un archivo ZIP
-            zip_filename = "fichas_bibliograficas.zip"
-            with zipfile.ZipFile(zip_filename, "w") as zip_file:
-                for i, ris in enumerate(ris_list):
-                    zip_file.writestr(f"ficha_{i+1}.ris", ris.encode('utf-8'))
-
-            # Abrir el archivo ZIP como bytes
-            with open(zip_filename, "rb") as file:
-                zip_data = file.read()
-
-            # Descargar el archivo ZIP
-            b64_zip = base64.b64encode(zip_data).decode()
-            href = f'<a href="data:application/zip;base64,{b64_zip}" download="{zip_filename}">Descargar archivo ZIP</a>'
-            st.markdown(href, unsafe_allow_html=True)
-
-            st.success("Se han generado las fichas bibliográficas.")
-        else:
-            st.warning("No se generaron fichas para ninguna de las referencias ingresadas.")
-
-
-def generate_ris(item):
-    ris = ""
-
-    # Generar la ficha en formato RIS
-    ris += f"TY  - {item.get('type', '')}\n"
-    ris += f"TI  - {item.get('title', [''])[0]}\n"
-
-    authors = item.get('author', [])
-    for author in authors:
-        given_name = author.get('given', '')
-        family_name = author.get('family', '')
-        ris += f"AU  - {family_name}, {given_name}\n"
-
-    date_parts = item.get("issued", {}).get("date-parts", [[]])
-    date = date_parts[0][0] if date_parts else ""
-    ris += f"PY  - {date}\n"
-
-    publication = item.get('container-title', '')
-    if publication:
-        ris += f"PB  - {publication}\n"
-
-    # Otros campos opcionales
-    volume = item.get('volume', '')
-    if volume:
-        ris += f"VL  - {volume}\n"
-
-    issue = item.get('issue', '')
-    if issue:
-        ris += f"IS  - {issue}\n"
-
-    page = item.get('page', '')
-    if page:
-        ris += f"SP  - {page}\n"
-
-    doi = item.get('DOI', '')
-    if doi:
-        ris += f"DO  - {doi}\n"
-
-    # Agregar los campos que desees incluir en la ficha RIS
-
-    ris += "ER  -\n\n"
-    return ris
-
-
-if __name__ == "__main__":
-    main()
+st.button("Descargar", download_files)
