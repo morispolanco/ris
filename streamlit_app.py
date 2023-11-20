@@ -51,12 +51,16 @@ def generate_ris(item):
     # Obtener los campos de la entrada
     title = item.get("title", "")
     authors = item.get("author", [])
+
+    # Obtener los nombres de los autores como cadenas de texto
+    author_names = [f"{author.get('family', '')}, {author.get('given', '')}" for author in authors]
+
     date_parts = item.get("issued", {}).get("date-parts", [[]])
     date = date_parts[0][0] if date_parts else ""
 
     # Generar la ficha en formato RIS
     ris = f"TY  - JOUR\nTI  - {title}\n"
-    ris += "AU  - " + "\nAU  - ".join(authors) + "\n"
+    ris += "AU  - " + "\nAU  - ".join(author_names) + "\n"
     ris += f"PY  - {date}\nER  -\n\n"
     return ris
 
